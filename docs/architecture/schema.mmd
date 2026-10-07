@@ -1,0 +1,76 @@
+erDiagram
+    %% Library Management System - business decisions
+    %% 1. USERS already exists (001_initial_schema) - do not recreate; columns mirrored here.
+    %% 2. A BORROWER is a library-card profile for exactly one USER (one-to-one, user_id unique).
+    %%    Not every user borrows (staff/admins), so the borrower side is optional.
+    %% 3. Each BOOK belongs to exactly one GENRE; a genre can classify many books.
+    %% 4. BOOKS and AUTHORS are many-to-many via BOOK_AUTHORS (composite PK, author_order for credits).
+    %% 5. BOOKS tracks inventory with total_copies / available_copies instead of per-copy rows.
+    %% 6. A LOAN is one borrower checking out one book; returned_at is null while the loan is open.
+    %% 7. Deleting a parent cascades to dependents (FKs use ON DELETE CASCADE).
+
+    USERS ||--o| BORROWERS : "registers as"
+    BORROWERS ||--o{ LOANS : "takes out"
+    BOOKS ||--o{ LOANS : "is loaned in"
+    GENRES ||--o{ BOOKS : "classifies"
+    BOOKS ||--o{ BOOK_AUTHORS : "written by"
+    AUTHORS ||--o{ BOOK_AUTHORS : "writes"
+
+    USERS {
+        serial id PK
+        varchar email UK "not null"
+        varchar name
+        timestamp created_at "not null, default NOW()"
+    }
+
+    BORROWERS {
+        serial id PK
+        int user_id FK, UK "not null"
+        varchar card_number UK "not null"
+        varchar phone
+        text address
+        date membership_expires_on "not null"
+        int max_active_loans "not null, default 5"
+        timestamp created_at "not null, default NOW()"
+    }
+
+    GENRES {
+        serial id PK
+        varchar name UK "not null"
+        text description
+    }
+
+    AUTHORS {
+        serial id PK
+        varchar first_name "not null"
+        varchar last_name "not null"
+        date birth_date
+        text biography
+    }
+
+    BOOKS {
+        serial id PK
+        int genre_id FK "not null"
+        varchar title "not null"
+        varchar isbn UK "not null"
+        int published_year
+        int total_copies "not null, default 1"
+        int available_copies "not null, default 1"
+        timestamp created_at "not null, default NOW()"
+    }
+
+    BOOK_AUTHORS {
+        int book_id PK, FK
+        int author_id PK, FK
+        int author_order "not null, default 1"
+    }
+
+    LOANS {
+        serial id PK
+        int borrower_id FK "not null"
+        int book_id FK "not null"
+        timestamp loaned_at "not null, default NOW()"
+        date due_on "not null"
+        timestamp returned_at "nullable"
+        decimal late_fee "not null, default 0"
+    }
